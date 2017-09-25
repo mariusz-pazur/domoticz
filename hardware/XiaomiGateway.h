@@ -72,6 +72,20 @@ private:
 		void handle_receive(const boost::system::error_code& error, std::size_t /*bytes_transferred*/);
 	};
 
+	class xiaomi_udp_poller
+	{
+	public:
+		xiaomi_udp_poller(boost::asio::io_service & io_service, const std::string gatewayIp);
+		~xiaomi_udp_poller();
+
+	private:
+		boost::asio::ip::udp::socket socket_;
+		void request_status();
+		std::string m_gatewayip;
+	};
+
+
+
 	class XiaomiGatewayTokenManager {
 	public:
 		static XiaomiGateway::XiaomiGatewayTokenManager& GetInstance();

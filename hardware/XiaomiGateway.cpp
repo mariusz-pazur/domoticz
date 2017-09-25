@@ -670,11 +670,12 @@ void XiaomiGateway::Do_Work()
 	}
 
 	XiaomiGateway::xiaomi_udp_server udp_server(io_service, m_HwdID, m_GatewayIp, m_LocalIp, m_ListenPort9898, m_OutputMessage, m_IncludeVoltage, this);
+
 	boost::thread bt;
 	if (m_ListenPort9898) {
 		bt = boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));
 	}
-
+	XiaomiGateway::xiaomi_udp_poller udp_poller(io_service, m_GatewayIp);
 	int sec_counter = 0;
 	while (!m_stoprequested)
 	{
@@ -1213,4 +1214,40 @@ std::string XiaomiGateway::XiaomiGatewayTokenManager::GetSID(const std::string &
 		}
 	}
 	return sid;
+}
+
+
+
+XiaomiGateway::xiaomi_udp_poller::xiaomi_udp_poller(boost::asio::io_service & io_service, const std::string gatewayIp)
+	: socket_(io_service, boost::asio::ip::udp::v4())
+{
+	m_gatewayip = gatewayIp;
+	_log.Log(LOG_STATUS, "xiaomi_udp_poller: created: %s", m_gatewayip.c_str());
+	int sec_counter = 0;
+	while (true)
+	{
+		sleep_seconds(1);
+		sec_counter++;		
+		if (sec_counter % 60 == 0)
+		{
+			request_status();
+		}
+	}
+
+}
+
+XiaomiGateway::xiaomi_udp_poller::~xiaomi_udp_poller()
+{
+}
+
+void XiaomiGateway::xiaomi_udp_poller::request_status()
+{
+	_log.Log(LOG_STATUS, "xiaomi_udp_poller: requesting status: %s", m_gatewayip.c_str());
+	std::string message = "{\"cmd\" : \"read\",\"sid\":\"";
+	message.append("158d000111eed3");
+	message.append("\"}");
+	boost::shared_ptr<std::string> message1(new std::string(message));
+	boost::asio::ip::udp::endpoint remote_endpoint;
+	remote_endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(m_gatewayip), 9898);
+	socket_.send_to(boost::asio::buffer(*message1), remote_endpoint);
 }
